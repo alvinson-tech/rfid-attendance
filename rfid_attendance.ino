@@ -15,13 +15,18 @@ const char* serverUrl = "http://10.85.167.103/rfid_attendance/api.php";
 #define RST_PIN 22
 #define BUZZER_PIN 4
 
+// PWM settings for passive buzzer
+#define BUZZER_RESOLUTION 8
+
 MFRC522 rfid(SS_PIN, RST_PIN);
 
 void setup() {
   Serial.begin(115200);
-  delay(1000); // Give serial monitor time to initialize
+  delay(1000);
   
-  pinMode(BUZZER_PIN, OUTPUT);
+  // Configure PWM for buzzer (passive buzzer needs frequency)
+  // ESP32 Arduino Core 3.x uses ledcAttach instead of ledcSetup + ledcAttachPin
+  ledcAttach(BUZZER_PIN, 2000, BUZZER_RESOLUTION); // GPIO 4, 2kHz frequency, 8-bit resolution
   
   // Initialize SPI and RFID
   SPI.begin();
@@ -48,14 +53,14 @@ void setup() {
     Serial.println(WiFi.localIP());
     Serial.print("Signal Strength (RSSI): ");
     Serial.println(WiFi.RSSI());
-    beep(2, 100);
+    beep(2, 100, 2200); // Double short beep - WiFi connected
   } else {
     Serial.println("\n\nFAILED TO CONNECT TO WIFI!");
     Serial.println("Please check:");
     Serial.println("1. WiFi SSID and password are correct");
     Serial.println("2. Router is on 2.4GHz band");
     Serial.println("3. ESP32 is within range");
-    beep(5, 100);
+    // No beep for WiFi failure
   }
   
   Serial.println("Place RFID card near reader...");
@@ -107,33 +112,50 @@ void sendToServer(String rfidCode) {
       Serial.println("Server Response: " + payload);
       
       if (payload.indexOf("success") > -1) {
-        beep(1, 200); // Success beep
+        Serial.println("✓ Attendance marked successfully!");
+        beep(1, 200, 2500); // 1 short beep - success
+      } else if (payload.indexOf("already_present") > -1) {
+        Serial.println("⚠ Already marked present!");
+        beep(1, 200, 2500); // 1 short beep - treat as success
       } else if (payload.indexOf("not_registered") > -1) {
-        beep(3, 100); // Error beep
-        Serial.println("Card not registered!");
+        Serial.println("✗ Card not registered!");
+        beep(3, 150, 1000); // 3 short beeps - not registered
       } else if (payload.indexOf("no_session") > -1) {
-        beep(2, 150); // Warning beep
-        Serial.println("No active session!");
+        Serial.println("⚠ No active session!");
+        beep(1, 800, 1500); // 1 long beep - no session
       } else {
-        beep(3, 100); // Error beep
+        Serial.println("✗ Unknown response!");
+        beep(3, 150, 1000); // 3 short beeps - error
       }
     } else {
       Serial.println("HTTP Error: " + String(httpCode));
-      beep(4, 100); // Connection error beep
+      // No beep for HTTP errors
     }
     
     http.end();
   } else {
     Serial.println("WiFi Disconnected!");
-    beep(5, 100);
+    // No beep for WiFi disconnect
   }
 }
 
-void beep(int times, int duration) {
+// Enhanced beep function for passive buzzer with Low Level Trigger
+// times: number of beeps
+// duration: duration of each beep in milliseconds
+// frequency: tone frequency in Hz (higher = higher pitch)
+void beep(int times, int duration, int frequency) {
   for (int i = 0; i < times; i++) {
-    digitalWrite(BUZZER_PIN, HIGH);
+    // Set frequency and turn on buzzer
+    ledcChangeFrequency(BUZZER_PIN, frequency, BUZZER_RESOLUTION);
+    ledcWrite(BUZZER_PIN, 128); // 50% duty cycle for good volume
     delay(duration);
-    digitalWrite(BUZZER_PIN, LOW);
-    delay(100);
+    
+    // Turn off buzzer
+    ledcWrite(BUZZER_PIN, 0);
+    
+    // Pause between beeps (except for the last one)
+    if (i < times - 1) {
+      delay(150);
+    }
   }
 }
