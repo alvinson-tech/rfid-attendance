@@ -12,6 +12,10 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RFID Attendance System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+
     <style>
         * {
             margin: 0;
@@ -20,77 +24,115 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f5f5;
+            font-family: 'DM Sans', sans-serif;
+            background: #f8f9fa;
+            color: #2c3e50;
         }
         
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
             color: white;
-            padding: 20px;
+            padding: 32px 20px;
             text-align: center;
             position: relative;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-weight: 600;
+            font-size: 32px;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+        
+        .header p {
+            font-weight: 300;
+            font-size: 16px;
+            opacity: 0.9;
         }
         
         .admin-link {
             position: absolute;
-            top: 20px;
+            top: 32px;
             right: 20px;
             background: white;
-            color: #667eea;
-            padding: 10px 20px;
-            border-radius: 5px;
+            color: #2c3e50;
+            padding: 10px 24px;
+            border-radius: 6px;
             text-decoration: none;
-            font-weight: 600;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        
+        .admin-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
         
         .container {
             max-width: 1400px;
-            margin: 20px auto;
+            margin: 32px auto;
             padding: 0 20px;
         }
         
         .status-card {
             background: white;
-            border-radius: 10px;
-            padding: 30px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
             text-align: center;
+            border: 1px solid #e9ecef;
+        }
+        
+        .status-card h2 {
+            font-weight: 600;
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #2c3e50;
         }
         
         .session-status {
             display: inline-block;
-            padding: 10px 25px;
-            border-radius: 30px;
-            font-size: 16px;
-            font-weight: 600;
+            padding: 12px 28px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
             margin: 20px 0;
+            letter-spacing: 0.3px;
         }
         
         .session-active {
-            background: #d1fae5;
-            color: #065f46;
+            background: #d4edda;
+            color: #155724;
         }
         
         .session-inactive {
-            background: #fee;
-            color: #c33;
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status-card p {
+            color: #6c757d;
+            font-size: 14px;
+            font-weight: 400;
         }
         
         .current-scan {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
             color: white;
-            border-radius: 10px;
-            padding: 30px;
-            margin-bottom: 20px;
+            border-radius: 12px;
+            padding: 32px;
+            margin-bottom: 24px;
             min-height: 200px;
             display: none;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.2);
         }
         
         .current-scan.show {
             display: block;
-            animation: slideIn 0.5s;
+            animation: slideIn 0.5s ease-out;
         }
         
         @keyframes slideIn {
@@ -104,10 +146,16 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
             }
         }
         
+        .current-scan h2 {
+            font-weight: 600;
+            margin-bottom: 24px;
+            font-size: 24px;
+        }
+        
         .user-details {
             display: grid;
             grid-template-columns: 150px 1fr;
-            gap: 20px;
+            gap: 24px;
             align-items: center;
         }
         
@@ -116,64 +164,76 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
             height: 150px;
             border-radius: 50%;
             object-fit: cover;
-            border: 5px solid white;
+            border: 4px solid white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
         
         .user-info h2 {
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+            font-weight: 600;
+            font-size: 26px;
         }
         
         .user-info p {
-            margin: 5px 0;
+            margin: 8px 0;
             font-size: 16px;
+            font-weight: 400;
         }
         
         .attendance-section {
             background: white;
-            border-radius: 10px;
-            padding: 25px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            border: 1px solid #e9ecef;
         }
         
         .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 28px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e9ecef;
         }
         
-        h2 {
-            color: #333;
+        .section-header h2 {
+            color: #2c3e50;
+            font-weight: 600;
+            font-size: 22px;
         }
         
         .attendance-count {
-            background: #667eea;
+            background: #3498db;
             color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 14px;
+            letter-spacing: 0.3px;
         }
         
         .id-cards-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 24px;
+            margin-top: 24px;
         }
         
         .id-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 15px;
-            padding: 20px;
-            color: white;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-            transition: transform 0.3s, box-shadow 0.3s;
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            color: #2c3e50;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 1px solid #e9ecef;
+            transition: all 0.3s ease;
             animation: cardAppear 0.5s ease-out;
         }
         
         @keyframes cardAppear {
             from {
-                transform: scale(0.9);
+                transform: scale(0.95);
                 opacity: 0;
             }
             to {
@@ -183,26 +243,27 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
         }
         
         .id-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            border-color: #3498db;
         }
         
         .id-card-header {
             display: flex;
             align-items: center;
-            gap: 15px;
-            margin-bottom: 15px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+            gap: 16px;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e9ecef;
         }
         
         .id-card-photo {
-            width: 80px;
-            height: 80px;
+            width: 70px;
+            height: 70px;
             border-radius: 50%;
             object-fit: cover;
-            border: 3px solid white;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            border: 3px solid #3498db;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         
         .id-card-name {
@@ -210,82 +271,110 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
         }
         
         .id-card-name h3 {
-            font-size: 20px;
-            margin-bottom: 5px;
+            font-size: 18px;
+            margin-bottom: 6px;
             font-weight: 600;
+            color: #2c3e50;
         }
         
         .id-card-usn {
-            font-size: 14px;
-            opacity: 0.9;
+            font-size: 13px;
+            color: #6c757d;
             font-weight: 500;
         }
         
         .id-card-body {
             display: grid;
-            gap: 10px;
+            gap: 12px;
         }
         
         .id-card-info {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             font-size: 14px;
+            color: #495057;
         }
         
         .id-card-icon {
-            width: 24px;
-            height: 24px;
+            width: 32px;
+            height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 16px;
         }
         
         .id-card-label {
-            font-weight: 500;
-            opacity: 0.9;
+            font-weight: 400;
         }
         
         .id-card-footer {
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 2px solid rgba(255, 255, 255, 0.3);
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
         
         .time-badge {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 6px 12px;
-            border-radius: 20px;
+            background: #f8f9fa;
+            color: #495057;
+            padding: 8px 14px;
+            border-radius: 6px;
             font-size: 13px;
-            font-weight: 600;
+            font-weight: 500;
         }
         
         .status-badge {
-            background: #10b981;
-            padding: 6px 12px;
-            border-radius: 20px;
+            background: #d4edda;
+            color: #155724;
+            padding: 8px 14px;
+            border-radius: 6px;
             font-size: 12px;
-            font-weight: 600;
+            font-weight: 500;
+            letter-spacing: 0.3px;
         }
         
         .no-data {
             text-align: center;
             padding: 60px 20px;
-            color: #999;
+            color: #adb5bd;
         }
         
         .no-data-icon {
             font-size: 64px;
             margin-bottom: 20px;
-            opacity: 0.3;
+            opacity: 0.5;
+        }
+        
+        .no-data h3 {
+            font-weight: 500;
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: #6c757d;
+        }
+        
+        .no-data p {
+            font-weight: 400;
+            font-size: 14px;
+            color: #adb5bd;
         }
         
         @media (max-width: 768px) {
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .admin-link {
+                position: static;
+                display: inline-block;
+                margin-top: 16px;
+            }
+            
             .id-cards-grid {
                 grid-template-columns: 1fr;
             }
@@ -293,6 +382,12 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
             .user-details {
                 grid-template-columns: 1fr;
                 text-align: center;
+            }
+            
+            .section-header {
+                flex-direction: column;
+                gap: 16px;
+                align-items: flex-start;
             }
         }
     </style>
@@ -321,7 +416,7 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
         </div>
         
         <div class="current-scan" id="currentScan">
-            <h2 style="margin-bottom: 20px;">Welcome!</h2>
+            <h2>Welcome!</h2>
             <div class="user-details" id="userDetails">
                 <!-- User details will be inserted here -->
             </div>
@@ -469,7 +564,7 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
         }
         
         function getPlaceholderImage() {
-            return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23e0e0e0" width="200" height="200"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="60" fill="%23999"%3E👤%3C/text%3E%3C/svg%3E';
+            return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23e9ecef" width="200" height="200"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="60" fill="%23adb5bd"%3E👤%3C/text%3E%3C/svg%3E';
         }
         
         // Initial fetch

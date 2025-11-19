@@ -79,6 +79,10 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel - RFID Attendance</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+
     <style>
         * {
             margin: 0;
@@ -87,47 +91,64 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f5f5;
+            font-family: 'DM Sans', sans-serif;
+            background: #f8f9fa;
+            color: #2c3e50;
         }
         
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
             color: white;
-            padding: 20px;
+            padding: 24px 32px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-weight: 600;
+            font-size: 26px;
+            letter-spacing: -0.5px;
+        }
+        
+        .header-buttons {
+            display: flex;
+            gap: 12px;
         }
         
         .container {
             max-width: 1200px;
-            margin: 20px auto;
+            margin: 32px auto;
             padding: 0 20px;
         }
         
         .card {
             background: white;
-            border-radius: 10px;
-            padding: 25px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            border: 1px solid #e9ecef;
         }
         
         h2 {
-            margin-bottom: 20px;
-            color: #333;
+            margin-bottom: 24px;
+            color: #2c3e50;
+            font-weight: 600;
+            font-size: 22px;
         }
         
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
         
         label {
             display: block;
-            margin-bottom: 5px;
-            color: #555;
+            margin-bottom: 8px;
+            color: #495057;
             font-weight: 500;
+            font-size: 14px;
         }
         
         input[type="text"],
@@ -135,55 +156,92 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
         select,
         input[type="file"] {
             width: 100%;
-            padding: 10px;
-            border: 2px solid #e0e0e0;
-            border-radius: 5px;
-            font-size: 14px;
+            padding: 12px 16px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 15px;
+            font-family: 'Raleway', sans-serif;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+        
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #3498db;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+        
+        input[type="text"]:read-only {
+            background: #e9ecef;
+            cursor: not-allowed;
         }
         
         .btn {
-            padding: 10px 20px;
+            padding: 12px 24px;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 14px;
-            transition: all 0.3s;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-family: 'Raleway', sans-serif;
+            letter-spacing: 0.3px;
         }
         
         .btn-primary {
-            background: #667eea;
+            background: #3498db;
             color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
         }
         
         .btn-success {
-            background: #10b981;
+            background: #27ae60;
             color: white;
+        }
+        
+        .btn-success:hover {
+            background: #229954;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
         }
         
         .btn-danger {
-            background: #ef4444;
+            background: #e74c3c;
             color: white;
         }
         
-        .btn:hover {
+        .btn-danger:hover {
+            background: #c0392b;
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
         }
         
         .success {
-            background: #d1fae5;
-            color: #065f46;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
+            background: #d4edda;
+            color: #155724;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            font-weight: 500;
+            border: 1px solid #c3e6cb;
         }
         
         .error {
-            background: #fee;
-            color: #c33;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
+            background: #f8d7da;
+            color: #721c24;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            font-weight: 500;
+            border: 1px solid #f5c6cb;
         }
         
         table {
@@ -193,14 +251,20 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
         }
         
         th, td {
-            padding: 12px;
+            padding: 14px;
             text-align: left;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 14px;
         }
         
         th {
-            background: #f9fafb;
+            background: #f8f9fa;
             font-weight: 600;
+            color: #495057;
+        }
+        
+        tbody tr:hover {
+            background: #f8f9fa;
         }
         
         .user-photo {
@@ -208,69 +272,75 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
             height: 50px;
             border-radius: 50%;
             object-fit: cover;
+            border: 2px solid #e9ecef;
         }
         
         .session-status {
             display: inline-block;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
+            padding: 8px 18px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
         }
         
         .session-active {
-            background: #d1fae5;
-            color: #065f46;
+            background: #d4edda;
+            color: #155724;
         }
         
         .session-inactive {
-            background: #fee;
-            color: #c33;
+            background: #f8d7da;
+            color: #721c24;
         }
         
         #rfidScanner {
-            font-size: 18px;
-            font-weight: bold;
+            font-size: 16px;
+            font-weight: 500;
             text-align: center;
-            padding: 20px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            transition: all 0.3s;
+            padding: 24px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
         }
         
         #rfidScanner.waiting {
-            background: #f0f4ff;
-            color: #667eea;
+            background: #e7f3ff;
+            color: #004085;
+            border: 2px dashed #3498db;
             animation: pulse 2s infinite;
         }
         
         #rfidScanner.detected {
-            background: #d1fae5;
-            color: #065f46;
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #27ae60;
         }
         
         @keyframes pulse {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
+            50% { opacity: 0.7; }
         }
         
         .two-column {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
+            gap: 20px;
         }
         
         .instruction-box {
             background: #fff3cd;
             border-left: 4px solid #ffc107;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 24px;
+            border-radius: 8px;
         }
         
         .instruction-box h3 {
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             color: #856404;
+            font-weight: 600;
+            font-size: 16px;
         }
         
         .instruction-box ol {
@@ -279,15 +349,41 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
         }
         
         .instruction-box li {
-            margin-bottom: 5px;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 16px;
+                text-align: center;
+            }
+            
+            .header-buttons {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+            
+            table {
+                font-size: 12px;
+            }
+            
+            th, td {
+                padding: 10px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>Admin Panel</h1>
-        <div>
-            <a href="index.php" class="btn btn-success" style="margin-right: 10px;">View Attendance</a>
+        <div class="header-buttons">
+            <a href="index.php" class="btn btn-success">View Attendance</a>
             <a href="?logout=1" class="btn btn-danger">Logout</a>
         </div>
     </div>
@@ -326,7 +422,7 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
                 </p>
             <?php else: ?>
                 <p><span class="session-status session-inactive">No Active Session</span></p>
-                <form method="POST" style="margin-top: 20px;">
+                <form method="POST" style="margin-top: 24px;">
                     <div class="form-group">
                         <label>Session Name</label>
                         <input type="text" name="session_name" placeholder="e.g., Morning Session - 19 Nov 2025" required>
@@ -414,7 +510,7 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
                                     <?php if ($user['photo']): ?>
                                         <img src="uploads/<?php echo $user['photo']; ?>" class="user-photo" alt="Photo">
                                     <?php else: ?>
-                                        <div style="width:50px;height:50px;background:#e0e0e0;border-radius:50%;"></div>
+                                        <div style="width:50px;height:50px;background:#e9ecef;border-radius:50%;"></div>
                                     <?php endif; ?>
                                 </td>
                                 <td><?php echo $user['usn']; ?></td>
@@ -427,7 +523,7 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
                     </tbody>
                 </table>
             <?php else: ?>
-                <p style="text-align: center; color: #999; padding: 20px;">No users registered yet</p>
+                <p style="text-align: center; color: #adb5bd; padding: 40px;">No users registered yet</p>
             <?php endif; ?>
         </div>
     </div>

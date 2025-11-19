@@ -4,11 +4,11 @@
 #include <HTTPClient.h>
 
 // WiFi Credentials
-const char* ssid = "Hogwarts Great Hall Wi-Fi";
-const char* password = "6esqqZxU";
+const char* ssid = "POCO M2";
+const char* password = "12345678";
 
 // Server URL (Change to your server's IP/domain)
-const char* serverUrl = "http://192.168.1.3/rfid_attendance/api.php";
+const char* serverUrl = "http://10.85.167.103/rfid_attendance/api.php";
 
 // RFID Pins
 #define SS_PIN 5
@@ -19,6 +19,8 @@ MFRC522 rfid(SS_PIN, RST_PIN);
 
 void setup() {
   Serial.begin(115200);
+  delay(1000); // Give serial monitor time to initialize
+  
   pinMode(BUZZER_PIN, OUTPUT);
   
   // Initialize SPI and RFID
@@ -26,21 +28,37 @@ void setup() {
   rfid.PCD_Init();
   
   // Connect to WiFi
-  Serial.print("Connecting to WiFi");
+  Serial.println("\n\n=== ESP32 RFID System Starting ===");
+  Serial.print("Connecting to WiFi: ");
+  Serial.println(ssid);
+  
+  WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   
-  while (WiFi.status() != WL_CONNECTED) {
+  int attempts = 0;
+  while (WiFi.status() != WL_CONNECTED && attempts < 30) {
     delay(500);
     Serial.print(".");
+    attempts++;
   }
   
-  Serial.println("\nWiFi Connected!");
-  Serial.print("IP Address: ");
-  Serial.println(WiFi.localIP());
-  Serial.println("Place RFID card near reader...");
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\nWiFi Connected!");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+    Serial.print("Signal Strength (RSSI): ");
+    Serial.println(WiFi.RSSI());
+    beep(2, 100);
+  } else {
+    Serial.println("\n\nFAILED TO CONNECT TO WIFI!");
+    Serial.println("Please check:");
+    Serial.println("1. WiFi SSID and password are correct");
+    Serial.println("2. Router is on 2.4GHz band");
+    Serial.println("3. ESP32 is within range");
+    beep(5, 100);
+  }
   
-  // Beep to indicate ready
-  beep(2, 100);
+  Serial.println("Place RFID card near reader...");
 }
 
 void loop() {

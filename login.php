@@ -43,6 +43,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login - RFID Attendance</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+
     <style>
         * {
             margin: 0;
@@ -51,99 +55,145 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'DM Sans', sans-serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
+            padding: 20px;
         }
         
         .login-container {
             background: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            width: 400px;
-            max-width: 90%;
+            padding: 48px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            width: 420px;
+            max-width: 100%;
+            border: 1px solid rgba(255,255,255,0.1);
         }
         
         h2 {
             text-align: center;
-            color: #333;
-            margin-bottom: 30px;
+            color: #2c3e50;
+            margin-bottom: 32px;
+            font-weight: 600;
+            font-size: 28px;
+            letter-spacing: -0.5px;
         }
         
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
         
         label {
             display: block;
-            margin-bottom: 5px;
-            color: #555;
+            margin-bottom: 8px;
+            color: #495057;
             font-weight: 500;
+            font-size: 14px;
         }
         
         input[type="text"],
         input[type="password"] {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 5px;
-            font-size: 14px;
-            transition: border-color 0.3s;
+            padding: 14px 16px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 15px;
+            font-family: 'Raleway', sans-serif;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
         }
         
         input[type="text"]:focus,
         input[type="password"]:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #3498db;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
         }
         
         .btn {
             width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 14px;
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             font-size: 16px;
+            font-weight: 500;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: all 0.3s ease;
+            font-family: 'Raleway', sans-serif;
+            letter-spacing: 0.3px;
         }
         
         .btn:hover {
             transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
         }
         
         .error {
-            background: #fee;
-            color: #c33;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 20px;
+            background: #f8d7da;
+            color: #721c24;
+            padding: 14px;
+            border-radius: 8px;
+            margin-bottom: 24px;
             text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+            border: 1px solid #f5c6cb;
         }
         
         .credentials-hint {
-            background: #e0e7ff;
-            color: #4338ca;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 20px;
+            background: #e7f3ff;
+            color: #004085;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
             text-align: center;
-            font-size: 13px;
+            font-size: 14px;
+            border: 1px solid #bee5eb;
+        }
+        
+        .credentials-hint strong {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 15px;
         }
         
         .home-link {
             text-align: center;
-            margin-top: 20px;
+            margin-top: 24px;
         }
         
         .home-link a {
-            color: #667eea;
+            color: #3498db;
             text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+            transition: color 0.3s ease;
+        }
+        
+        .home-link a:hover {
+            color: #2c3e50;
+        }
+        
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 32px 24px;
+            }
+            
+            h2 {
+                font-size: 24px;
+            }
         }
     </style>
 </head>
@@ -152,7 +202,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <h2>Admin Login</h2>
         
         <div class="credentials-hint">
-            <strong>Default Login:</strong><br>
+            <strong>Default Login</strong>
             Username: admin<br>
             Password: admin@123
         </div>
@@ -164,7 +214,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <form method="POST">
             <div class="form-group">
                 <label>Username</label>
-                <input type="text" name="username" required>
+                <input type="text" name="username" required autofocus>
             </div>
             
             <div class="form-group">

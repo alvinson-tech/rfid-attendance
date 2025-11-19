@@ -1,19 +1,35 @@
--- Create Database
-CREATE DATABASE IF NOT EXISTS rfid_attendance;
+-- =====================================================
+-- RFID ATTENDANCE SYSTEM - DATABASE RESET SCRIPT
+-- This will DELETE all data and start fresh
+-- USE WITH CAUTION!
+-- =====================================================
+
+-- Drop existing database and recreate
+DROP DATABASE IF EXISTS rfid_attendance;
+CREATE DATABASE rfid_attendance;
 USE rfid_attendance;
 
--- Admin Table
-CREATE TABLE IF NOT EXISTS admin (
+-- =====================================================
+-- TABLE: admin
+-- Stores administrator credentials
+-- =====================================================
+CREATE TABLE admin (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL
-);
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Insert default admin (username: admin, password: admin123)
+-- Insert default admin account
+-- Username: admin
+-- Password: admin@123
 INSERT INTO admin (username, password) VALUES ('admin', 'admin@123');
 
--- Users Table
-CREATE TABLE IF NOT EXISTS users (
+-- =====================================================
+-- TABLE: users
+-- Stores registered user information
+-- =====================================================
+CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     rfid_code VARCHAR(20) UNIQUE NOT NULL,
     usn VARCHAR(20) UNIQUE NOT NULL,
@@ -21,34 +37,58 @@ CREATE TABLE IF NOT EXISTS users (
     gender ENUM('Male', 'Female', 'Other') NOT NULL,
     email VARCHAR(100) NOT NULL,
     photo VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_rfid (rfid_code),
+    INDEX idx_usn (usn)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Sessions Table
-CREATE TABLE IF NOT EXISTS sessions (
+-- =====================================================
+-- TABLE: sessions
+-- Stores attendance sessions
+-- =====================================================
+CREATE TABLE sessions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     session_name VARCHAR(100) NOT NULL,
     start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     end_time TIMESTAMP NULL,
-    is_active TINYINT(1) DEFAULT 1
-);
+    is_active TINYINT(1) DEFAULT 1,
+    INDEX idx_active (is_active),
+    INDEX idx_start_time (start_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Attendance Table
-CREATE TABLE IF NOT EXISTS attendance (
+-- =====================================================
+-- TABLE: attendance
+-- Stores attendance records
+-- =====================================================
+CREATE TABLE attendance (
     id INT AUTO_INCREMENT PRIMARY KEY,
     session_id INT NOT NULL,
     user_id INT NOT NULL,
     rfid_code VARCHAR(20) NOT NULL,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_session (session_id),
+    INDEX idx_user (user_id),
+    INDEX idx_timestamp (timestamp),
+    UNIQUE KEY unique_attendance (session_id, user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS pending_rfid (
+-- =====================================================
+-- TABLE: pending_rfid
+-- Temporarily stores unregistered RFID scans
+-- =====================================================
+CREATE TABLE pending_rfid (
     id INT AUTO_INCREMENT PRIMARY KEY,
     rfid_code VARCHAR(20) UNIQUE NOT NULL,
-    scan_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+    scan_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_scan_time (scan_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Create uploads directory for photos
--- You'll need to create a folder named 'uploads' in your project root with write permissions
+-- =====================================================
+-- NOTES:
+-- 1. Default admin credentials: admin / admin@123
+-- 2. All previous data will be permanently deleted
+-- 3. Make sure to backup important data before running
+-- 4. The uploads folder must be manually cleared/recreated
+-- =====================================================
