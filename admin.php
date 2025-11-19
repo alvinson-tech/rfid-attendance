@@ -57,13 +57,44 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['start_session'])) {
     
     if ($stmt->execute()) {
         $sessionSuccess = "Session started successfully!";
+        // Redirect to refresh the page and show active session
+        header("Location: admin.php?session_started=1");
+        exit();
     }
 }
 
 // Handle session end
 if (isset($_GET['end_session'])) {
-    $conn->query("UPDATE sessions SET is_active = 0, end_time = NOW() WHERE is_active = 1");
-    $sessionSuccess = "Session ended successfully!";
+    // Get the active session ID
+    $activeSessionResult = $conn->query("SELECT id FROM sessions WHERE is_active = 1 ORDER BY start_time DESC LIMIT 1");
+    
+    if ($activeSessionResult->num_rows > 0) {
+        $activeSession = $activeSessionResult->fetch_assoc();
+        $sessionId = $activeSession['id'];
+        
+        // Delete all attendance records for this session
+        $stmt = $conn->prepare("DELETE FROM attendance WHERE session_id = ?");
+        $stmt->bind_param("i", $sessionId);
+        $stmt->execute();
+        
+        // End the session
+        $conn->query("UPDATE sessions SET is_active = 0, end_time = NOW() WHERE id = $sessionId");
+        
+        $sessionSuccess = "Session ended successfully! All attendance records for this session have been cleared.";
+    }
+    
+    // Redirect to clear the URL parameter
+    header("Location: admin.php?session_ended=1");
+    exit();
+}
+
+// Show success message from URL parameters
+if (isset($_GET['session_started'])) {
+    $sessionSuccess = "Session started successfully!";
+}
+
+if (isset($_GET['session_ended'])) {
+    $sessionSuccess = "Session ended successfully! All attendance records have been cleared.";
 }
 
 // Get active session
@@ -160,7 +191,7 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
             border: 1px solid #dee2e6;
             border-radius: 8px;
             font-size: 15px;
-            font-family: 'Raleway', sans-serif;
+            font-family: 'DM Sans', sans-serif;
             transition: all 0.3s ease;
             background: #f8f9fa;
         }
@@ -187,7 +218,7 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
             font-size: 14px;
             font-weight: 500;
             transition: all 0.3s ease;
-            font-family: 'Raleway', sans-serif;
+            font-family: 'DM Sans', sans-serif;
             letter-spacing: 0.3px;
         }
         
@@ -353,6 +384,12 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
             font-size: 14px;
         }
         
+        .session-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
@@ -416,10 +453,12 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
         <div class="card">
             <h2>Session Management</h2>
             <?php if ($hasActiveSession): ?>
-                <p>
-                    <span class="session-status session-active">Active Session</span>
-                    <a href="?end_session=1" class="btn btn-danger" style="float: right;">End Session</a>
-                </p>
+                <div class="session-actions">
+                    <div>
+                        <span class="session-status session-active">Active Session</span>
+                    </div>
+                    <a href="?end_session=1" class="btn btn-danger" onclick="return confirm('Are you sure? This will delete all attendance records for the current session!');">End Session & Clear Data</a>
+                </div>
             <?php else: ?>
                 <p><span class="session-status session-inactive">No Active Session</span></p>
                 <form method="POST" style="margin-top: 24px;">

@@ -51,10 +51,15 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
             opacity: 0.9;
         }
         
-        .admin-link {
+        .header-buttons {
             position: absolute;
             top: 32px;
             right: 20px;
+            display: flex;
+            gap: 12px;
+        }
+        
+        .admin-link {
             background: white;
             color: #2c3e50;
             padding: 10px 24px;
@@ -63,11 +68,47 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
             font-weight: 500;
             transition: all 0.3s ease;
             font-size: 14px;
+            border: none;
+            cursor: pointer;
         }
         
         .admin-link:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .pdf-button {
+            background: #27ae60;
+            color: white;
+            padding: 10px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .pdf-button:hover {
+            background: #229954;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+        }
+        
+        .pdf-button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            opacity: 0.6;
+            transform: none;
+        }
+        
+        .pdf-button:disabled:hover {
+            transform: none;
+            box-shadow: none;
         }
         
         .container {
@@ -201,6 +242,12 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
             color: #2c3e50;
             font-weight: 600;
             font-size: 22px;
+        }
+        
+        .section-header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
         
         .attendance-count {
@@ -369,9 +416,9 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
                 font-size: 24px;
             }
             
-            .admin-link {
+            .header-buttons {
                 position: static;
-                display: inline-block;
+                justify-content: center;
                 margin-top: 16px;
             }
             
@@ -389,12 +436,19 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
                 gap: 16px;
                 align-items: flex-start;
             }
+            
+            .section-header-right {
+                width: 100%;
+                justify-content: space-between;
+            }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <a href="login.php" class="admin-link">Admin Login</a>
+        <div class="header-buttons">
+            <a href="login.php" class="admin-link">Admin Login</a>
+        </div>
         <h1>RFID Attendance System</h1>
         <p>Scan your card to mark attendance</p>
     </div>
@@ -425,7 +479,14 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
         <div class="attendance-section">
             <div class="section-header">
                 <h2>Today's Attendance</h2>
-                <div class="attendance-count" id="attendanceCount">0 Present</div>
+                <div class="section-header-right">
+                    <div class="attendance-count" id="attendanceCount">0 Present</div>
+                    <?php if ($hasActiveSession): ?>
+                        <a href="download_pdf.php" class="pdf-button">📥 Download PDF</a>
+                    <?php else: ?>
+                        <button class="pdf-button" disabled title="Start a session to download PDF">📥 Download PDF</button>
+                    <?php endif; ?>
+                </div>
             </div>
             
             <div class="id-cards-grid" id="idCardsContainer">
@@ -439,7 +500,43 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
     </div>
     
     <script>
+        // Audio Context for beep sounds
+        let audioContext = null;
+        
+        function initAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+        
+        function playBeep(times, frequency = 800, duration = 100) {
+            initAudioContext();
+            
+            let delay = 0;
+            for (let i = 0; i < times; i++) {
+                setTimeout(() => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.frequency.value = frequency;
+                    oscillator.type = 'sine';
+                    
+                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration / 1000);
+                    
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + duration / 1000);
+                }, delay);
+                
+                delay += duration + 150; // 150ms gap between beeps
+            }
+        }
+        
         // Poll for new attendance records
+        let lastStatus = '';
         setInterval(fetchAttendance, 2000);
         
         function fetchAttendance() {
@@ -453,10 +550,36 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
                         const latest = data.records[0];
                         if (latest && !document.getElementById('card-' + latest.id)) {
                             showCurrentScan(latest);
+                            playBeep(1, 800, 200); // 1 beep for success
                         }
                     }
                 });
         }
+        
+        // Listen for card scan events from API
+        let lastRfidCheck = '';
+        setInterval(() => {
+            fetch('api.php?action=get_pending')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success' && data.rfid) {
+                        if (data.rfid !== lastRfidCheck) {
+                            lastRfidCheck = data.rfid;
+                            // Card detected but not registered - 2 beeps
+                            playBeep(2, 600, 150);
+                            console.log('Unregistered card detected:', data.rfid);
+                        }
+                    }
+                })
+                .catch(error => {
+                    // Card read error - 3 beeps (only on significant errors)
+                    if (error.message !== lastStatus) {
+                        lastStatus = error.message;
+                        // Uncomment if you want error beeps:
+                        // playBeep(3, 400, 100);
+                    }
+                });
+        }, 3000);
         
         function showCurrentScan(user) {
             const currentScan = document.getElementById('currentScan');
