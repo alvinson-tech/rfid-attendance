@@ -36,6 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['register_user'])) {
     $stmt->bind_param("ssssss", $rfidCode, $usn, $name, $gender, $email, $photo);
     
     if ($stmt->execute()) {
+        // Remove from pending table
+        $conn->query("DELETE FROM pending_rfid WHERE rfid_code = '$rfidCode'");
         $success = "User registered successfully!";
     } else {
         $error = "Error: " . $conn->error;
@@ -229,18 +231,55 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
         #rfidScanner {
             font-size: 18px;
             font-weight: bold;
-            color: #667eea;
             text-align: center;
             padding: 20px;
-            background: #f0f4ff;
             border-radius: 5px;
             margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        
+        #rfidScanner.waiting {
+            background: #f0f4ff;
+            color: #667eea;
+            animation: pulse 2s infinite;
+        }
+        
+        #rfidScanner.detected {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
         }
         
         .two-column {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
+        }
+        
+        .instruction-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        
+        .instruction-box h3 {
+            margin-bottom: 10px;
+            color: #856404;
+        }
+        
+        .instruction-box ol {
+            margin-left: 20px;
+            color: #856404;
+        }
+        
+        .instruction-box li {
+            margin-bottom: 5px;
         }
     </style>
 </head>
@@ -266,6 +305,17 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
             <div class="success"><?php echo $sessionSuccess; ?></div>
         <?php endif; ?>
         
+        <?php if (!$hasActiveSession): ?>
+            <div class="instruction-box">
+                <h3>⚠️ Important: Start a Session First!</h3>
+                <ol>
+                    <li>Start a new session below</li>
+                    <li>Then scan your RFID card</li>
+                    <li>The card number will auto-fill in the registration form</li>
+                </ol>
+            </div>
+        <?php endif; ?>
+        
         <!-- Session Management -->
         <div class="card">
             <h2>Session Management</h2>
@@ -289,9 +339,16 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
         <!-- Register User -->
         <div class="card">
             <h2>Register New User</h2>
-            <div id="rfidScanner">Waiting for RFID card... Scan a card to auto-fill RFID Code</div>
             
-            <form method="POST" enctype="multipart/form-data">
+            <?php if (!$hasActiveSession): ?>
+                <div class="error">⚠️ Please start a session first before scanning cards!</div>
+            <?php endif; ?>
+            
+            <div id="rfidScanner" class="waiting">
+                🔍 Waiting for RFID card scan...
+            </div>
+            
+            <form method="POST" enctype="multipart/form-data" id="registerForm">
                 <div class="form-group">
                     <label>RFID Code</label>
                     <input type="text" id="rfidInput" name="rfid_code" required readonly>
@@ -337,58 +394,106 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
         
         <!-- Registered Users -->
         <div class="card">
-            <h2>Registered Users</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Photo</th>
-                        <th>USN</th>
-                        <th>Name</th>
-                        <th>Gender</th>
-                        <th>Email</th>
-                        <th>RFID Code</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php while ($user = $users->fetch_assoc()): ?>
+            <h2>Registered Users (<?php echo $users->num_rows; ?>)</h2>
+            <?php if ($users->num_rows > 0): ?>
+                <table>
+                    <thead>
                         <tr>
-                            <td>
-                                <?php if ($user['photo']): ?>
-                                    <img src="<?php echo UPLOAD_DIR . $user['photo']; ?>" class="user-photo" alt="Photo">
-                                <?php else: ?>
-                                    <div style="width:50px;height:50px;background:#e0e0e0;border-radius:50%;"></div>
-                                <?php endif; ?>
-                            </td>
-                            <td><?php echo $user['usn']; ?></td>
-                            <td><?php echo $user['name']; ?></td>
-                            <td><?php echo $user['gender']; ?></td>
-                            <td><?php echo $user['email']; ?></td>
-                            <td><?php echo $user['rfid_code']; ?></td>
+                            <th>Photo</th>
+                            <th>USN</th>
+                            <th>Name</th>
+                            <th>Gender</th>
+                            <th>Email</th>
+                            <th>RFID Code</th>
                         </tr>
-                    <?php endwhile; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php while ($user = $users->fetch_assoc()): ?>
+                            <tr>
+                                <td>
+                                    <?php if ($user['photo']): ?>
+                                        <img src="<?php echo UPLOAD_DIR . $user['photo']; ?>" class="user-photo" alt="Photo">
+                                    <?php else: ?>
+                                        <div style="width:50px;height:50px;background:#e0e0e0;border-radius:50%;"></div>
+                                    <?php endif; ?>
+                                </td>
+                                <td><?php echo $user['usn']; ?></td>
+                                <td><?php echo $user['name']; ?></td>
+                                <td><?php echo $user['gender']; ?></td>
+                                <td><?php echo $user['email']; ?></td>
+                                <td><?php echo $user['rfid_code']; ?></td>
+                            </tr>
+                        <?php endwhile; ?>
+                    </tbody>
+                </table>
+            <?php else: ?>
+                <p style="text-align: center; color: #999; padding: 20px;">No users registered yet</p>
+            <?php endif; ?>
         </div>
     </div>
     
     <script>
-        // Poll for new RFID scans
-        setInterval(pollRFID, 1000);
+        let lastDetectedRFID = '';
         
-        function pollRFID() {
-            // In a real implementation, you would poll the ESP32 or use WebSockets
-            // For now, this is a placeholder for manual entry
+        // Poll for unregistered RFID scans every second
+        setInterval(checkForPendingRFID, 1000);
+        
+        function checkForPendingRFID() {
+            fetch('api.php?action=get_pending')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success' && data.rfid) {
+                        // Only update if it's a new RFID
+                        if (data.rfid !== lastDetectedRFID) {
+                            lastDetectedRFID = data.rfid;
+                            setRFIDCode(data.rfid);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.log('Polling error:', error);
+                });
         }
         
-        // Allow manual RFID entry by clicking the scanner div
-        document.getElementById('rfidScanner').addEventListener('click', function() {
-            const code = prompt('Enter RFID code manually:');
-            if (code) {
-                document.getElementById('rfidInput').value = code;
-                this.textContent = 'RFID Code captured: ' + code;
-                this.style.background = '#d1fae5';
-            }
-        });
+        function setRFIDCode(code) {
+            const rfidInput = document.getElementById('rfidInput');
+            const scanner = document.getElementById('rfidScanner');
+            
+            rfidInput.value = code;
+            scanner.textContent = '✓ RFID Card Detected: ' + code;
+            scanner.className = 'detected';
+            
+            // Play a beep sound (optional)
+            playBeep();
+            
+            // Focus on USN field for quick data entry
+            document.querySelector('input[name="usn"]').focus();
+            
+            // Reset scanner after 5 seconds
+            setTimeout(() => {
+                scanner.textContent = '🔍 Waiting for RFID card scan...';
+                scanner.className = 'waiting';
+            }, 5000);
+        }
+        
+        function playBeep() {
+            // Create a simple beep sound
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
     </script>
 </body>
 </html>

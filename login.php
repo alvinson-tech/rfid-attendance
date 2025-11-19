@@ -21,7 +21,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($result->num_rows == 1) {
             $admin = $result->fetch_assoc();
             
-            if (password_verify($password, $admin['password'])) {
+            // Simple password comparison (no encryption)
+            if ($password === $admin['password']) {
                 $_SESSION['admin_logged_in'] = true;
                 $_SESSION['admin_username'] = $username;
                 redirect('admin.php');
@@ -125,6 +126,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             text-align: center;
         }
         
+        .credentials-hint {
+            background: #e0e7ff;
+            color: #4338ca;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 13px;
+        }
+        
         .home-link {
             text-align: center;
             margin-top: 20px;
@@ -139,6 +150,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <body>
     <div class="login-container">
         <h2>Admin Login</h2>
+        
+        <div class="credentials-hint">
+            <strong>Default Login:</strong><br>
+            Username: admin<br>
+            Password: admin@123
+        </div>
         
         <?php if ($error): ?>
             <div class="error"><?php echo $error; ?></div>

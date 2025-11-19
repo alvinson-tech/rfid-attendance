@@ -32,6 +32,13 @@ if (isset($_GET['action']) && $_GET['action'] == 'scan') {
     $userResult = $stmt->get_result();
     
     if ($userResult->num_rows == 0) {
+        // Store unregistered RFID for admin to see
+        $storeQuery = "INSERT INTO pending_rfid (rfid_code, scan_time) VALUES (?, NOW()) 
+                       ON DUPLICATE KEY UPDATE scan_time = NOW()";
+        $storeStmt = $conn->prepare($storeQuery);
+        $storeStmt->bind_param("s", $rfidCode);
+        $storeStmt->execute();
+        
         echo json_encode(['status' => 'not_registered', 'message' => 'Card not registered', 'rfid' => $rfidCode]);
         exit;
     }
@@ -101,6 +108,27 @@ if (isset($_GET['action']) && $_GET['action'] == 'get_latest') {
     }
     
     echo json_encode(['status' => 'success', 'records' => $records]);
+    exit;
+}
+
+// Get pending (unregistered) RFID scans for admin panel
+if (isset($_GET['action']) && $_GET['action'] == 'get_pending') {
+    // Get the most recent pending RFID scan from last 30 seconds
+    $query = "SELECT rfid_code, scan_time FROM pending_rfid 
+              WHERE scan_time > DATE_SUB(NOW(), INTERVAL 30 SECOND) 
+              ORDER BY scan_time DESC LIMIT 1";
+    $result = $conn->query($query);
+    
+    if ($result->num_rows > 0) {
+        $pending = $result->fetch_assoc();
+        
+        // Delete old pending entries (older than 1 minute)
+        $conn->query("DELETE FROM pending_rfid WHERE scan_time < DATE_SUB(NOW(), INTERVAL 1 MINUTE)");
+        
+        echo json_encode(['status' => 'success', 'rfid' => $pending['rfid_code']]);
+    } else {
+        echo json_encode(['status' => 'no_pending']);
+    }
     exit;
 }
 
