@@ -412,7 +412,7 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
                             <tr>
                                 <td>
                                     <?php if ($user['photo']): ?>
-                                        <img src="<?php echo UPLOAD_DIR . $user['photo']; ?>" class="user-photo" alt="Photo">
+                                        <img src="uploads/<?php echo $user['photo']; ?>" class="user-photo" alt="Photo">
                                     <?php else: ?>
                                         <div style="width:50px;height:50px;background:#e0e0e0;border-radius:50%;"></div>
                                     <?php endif; ?>
