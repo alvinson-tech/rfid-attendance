@@ -10,8 +10,7 @@ CREATE TABLE IF NOT EXISTS admin (
 );
 
 -- Insert default admin (username: admin, password: admin123)
-INSERT INTO admin (username, password) VALUES 
-('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi');
+INSERT INTO admin (username, password) VALUES ('admin', 'admin@123');
 
 -- Users Table
 CREATE TABLE IF NOT EXISTS users (
@@ -43,6 +42,12 @@ CREATE TABLE IF NOT EXISTS attendance (
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS pending_rfid (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    rfid_code VARCHAR(20) UNIQUE NOT NULL,
+    scan_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create uploads directory for photos
