@@ -19,26 +19,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['register_user'])) {
     $gender = $_POST['gender'];
     $email = $_POST['email'];
     
-    // Handle photo upload
-    $photo = '';
-    if (isset($_FILES['photo']) && $_FILES['photo']['error'] == 0) {
-        $allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
-        $fileType = $_FILES['photo']['type'];
-        
-        if (in_array($fileType, $allowedTypes)) {
-            $extension = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
-            $photo = 'user_' . time() . '.' . $extension;
-            move_uploaded_file($_FILES['photo']['tmp_name'], UPLOAD_DIR . $photo);
-        }
-    }
-    
-    $stmt = $conn->prepare("INSERT INTO users (rfid_code, usn, name, gender, email, photo) VALUES (?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("ssssss", $rfidCode, $usn, $name, $gender, $email, $photo);
+    $stmt = $conn->prepare("INSERT INTO users (rfid_code, usn, name, gender, email) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param("sssss", $rfidCode, $usn, $name, $gender, $email);
     
     if ($stmt->execute()) {
         // Remove from pending table
         $conn->query("DELETE FROM pending_rfid WHERE rfid_code = '$rfidCode'");
-        $success = "User registered successfully!";
+        $success = "User registered successfully! Photo will be captured on first attendance scan.";
     } else {
         $error = "Error: " . $conn->error;
     }
@@ -184,8 +171,7 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
         
         input[type="text"],
         input[type="email"],
-        select,
-        input[type="file"] {
+        select {
             width: 100%;
             padding: 12px 16px;
             border: 1px solid #dee2e6;
@@ -298,14 +284,6 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
             background: #f8f9fa;
         }
         
-        .user-photo {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid #e9ecef;
-        }
-        
         .session-status {
             display: inline-block;
             padding: 8px 18px;
@@ -389,6 +367,17 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
             justify-content: space-between;
             align-items: center;
         }
+
+        .info-badge {
+            background: #e7f3ff;
+            color: #004085;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            border: 1px solid #bee5eb;
+            margin-top: 12px;
+        }
         
         @media (max-width: 768px) {
             .header {
@@ -445,6 +434,7 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
                     <li>Start a new session below</li>
                     <li>Then scan your RFID card</li>
                     <li>The card number will auto-fill in the registration form</li>
+                    <li>Photo will be captured automatically when user scans for attendance</li>
                 </ol>
             </div>
         <?php endif; ?>
@@ -483,7 +473,11 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
                 🔍 Waiting for RFID card scan...
             </div>
             
-            <form method="POST" enctype="multipart/form-data" id="registerForm">
+            <div class="info-badge">
+                📸 Note: User photo will be captured automatically using laptop camera when they scan their card for attendance in the main system.
+            </div>
+            
+            <form method="POST" id="registerForm">
                 <div class="form-group">
                     <label>RFID Code</label>
                     <input type="text" id="rfidInput" name="rfid_code" required readonly>
@@ -518,11 +512,6 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
                     </div>
                 </div>
                 
-                <div class="form-group">
-                    <label>Profile Photo</label>
-                    <input type="file" name="photo" accept="image/*">
-                </div>
-                
                 <button type="submit" name="register_user" class="btn btn-primary">Register User</button>
             </form>
         </div>
@@ -534,7 +523,6 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
                 <table>
                     <thead>
                         <tr>
-                            <th>Photo</th>
                             <th>USN</th>
                             <th>Name</th>
                             <th>Gender</th>
@@ -545,13 +533,6 @@ $users = $conn->query("SELECT * FROM users ORDER BY created_at DESC");
                     <tbody>
                         <?php while ($user = $users->fetch_assoc()): ?>
                             <tr>
-                                <td>
-                                    <?php if ($user['photo']): ?>
-                                        <img src="uploads/<?php echo $user['photo']; ?>" class="user-photo" alt="Photo">
-                                    <?php else: ?>
-                                        <div style="width:50px;height:50px;background:#e9ecef;border-radius:50%;"></div>
-                                    <?php endif; ?>
-                                </td>
                                 <td><?php echo $user['usn']; ?></td>
                                 <td><?php echo $user['name']; ?></td>
                                 <td><?php echo $user['gender']; ?></td>

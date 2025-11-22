@@ -411,15 +411,117 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
             color: #adb5bd;
         }
         
+        /* Camera Modal Styles */
+        .camera-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .camera-modal.show {
+            display: flex;
+        }
+        
+        .camera-container {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 800px;
+            width: 90%;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        
+        .camera-container h2 {
+            text-align: center;
+            margin-bottom: 24px;
+            color: #2c3e50;
+            font-size: 24px;
+        }
+        
+        #cameraVideo {
+            width: 100%;
+            max-width: 640px;
+            height: auto;
+            border-radius: 8px;
+            display: block;
+            margin: 0 auto 20px;
+            background: #000;
+        }
+        
+        #captureCanvas {
+            display: none;
+        }
+        
+        .camera-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        
+        .btn-capture {
+            background: #3498db;
+            color: white;
+            padding: 14px 32px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'DM Sans', sans-serif;
+        }
+        
+        .btn-capture:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        }
+        
+        .btn-cancel {
+            background: #e74c3c;
+            color: white;
+            padding: 14px 32px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'DM Sans', sans-serif;
+        }
+        
+        .btn-cancel:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+        }
+        
+        .camera-status {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        
         @media (max-width: 768px) {
-            .header h1 {
-                font-size: 24px;
+            .header {
+                flex-direction: column;
+                gap: 16px;
+                text-align: center;
             }
             
             .header-buttons {
                 position: static;
                 justify-content: center;
                 margin-top: 16px;
+                width: 100%;
             }
             
             .id-cards-grid {
@@ -440,6 +542,18 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
             .section-header-right {
                 width: 100%;
                 justify-content: space-between;
+            }
+            
+            .camera-container {
+                padding: 20px;
+            }
+            
+            .camera-buttons {
+                flex-direction: column;
+            }
+            
+            .btn-capture, .btn-cancel {
+                width: 100%;
             }
         }
     </style>
@@ -499,9 +613,25 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
         </div>
     </div>
     
+    <!-- Camera Modal -->
+    <div class="camera-modal" id="cameraModal">
+        <div class="camera-container">
+            <h2>📸 Capture Your Photo</h2>
+            <div class="camera-status" id="cameraStatus">Initializing camera...</div>
+            <video id="cameraVideo" autoplay playsinline></video>
+            <canvas id="captureCanvas"></canvas>
+            <div class="camera-buttons">
+                <button class="btn-capture" id="captureButton">Capture Photo</button>
+                <button class="btn-cancel" id="cancelButton">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
     <script>
         // Audio Context for beep sounds
         let audioContext = null;
+        let cameraStream = null;
+        let pendingAttendanceId = null;
         
         function initAudioContext() {
             if (!audioContext) {
@@ -531,12 +661,13 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
                     oscillator.stop(audioContext.currentTime + duration / 1000);
                 }, delay);
                 
-                delay += duration + 150; // 150ms gap between beeps
+                delay += duration + 150;
             }
         }
         
         // Poll for new attendance records
         let lastStatus = '';
+        let lastRecordCount = 0;
         setInterval(fetchAttendance, 2000);
         
         function fetchAttendance() {
@@ -544,48 +675,122 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success' && data.records.length > 0) {
-                        updateAttendanceCards(data.records);
-                        
-                        // Show the latest scan
-                        const latest = data.records[0];
-                        if (latest && !document.getElementById('card-' + latest.id)) {
-                            showCurrentScan(latest);
-                            playBeep(1, 800, 200); // 1 beep for success
+                        // Check if there's a new record that needs photo
+                        if (data.records.length > lastRecordCount) {
+                            const latest = data.records[0];
+                            
+                            // Check if this record needs a photo (new attendance without photo)
+                            if (latest && !latest.photo_captured) {
+                                pendingAttendanceId = latest.id;
+                                openCamera();
+                                playBeep(2, 800, 200);
+                            } else {
+                                showCurrentScan(latest);
+                                playBeep(1, 800, 200);
+                            }
                         }
+                        
+                        lastRecordCount = data.records.length;
+                        updateAttendanceCards(data.records);
                     }
                 });
         }
         
-        // Listen for card scan events from API
-        let lastRfidCheck = '';
-        setInterval(() => {
-            fetch('api.php?action=get_pending')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success' && data.rfid) {
-                        if (data.rfid !== lastRfidCheck) {
-                            lastRfidCheck = data.rfid;
-                            // Card detected but not registered - 2 beeps
-                            playBeep(2, 600, 150);
-                            console.log('Unregistered card detected:', data.rfid);
-                        }
-                    }
-                })
-                .catch(error => {
-                    // Card read error - 3 beeps (only on significant errors)
-                    if (error.message !== lastStatus) {
-                        lastStatus = error.message;
-                        // Uncomment if you want error beeps:
-                        // playBeep(3, 400, 100);
-                    }
+        // Camera functions
+        async function openCamera() {
+            const modal = document.getElementById('cameraModal');
+            const video = document.getElementById('cameraVideo');
+            const status = document.getElementById('cameraStatus');
+            
+            modal.classList.add('show');
+            status.textContent = 'Requesting camera access...';
+            
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 640, height: 480 }
                 });
-        }, 3000);
+                
+                video.srcObject = cameraStream;
+                status.textContent = 'Camera ready! Position yourself and click Capture Photo';
+            } catch (error) {
+                console.error('Camera error:', error);
+                status.textContent = 'Camera access denied. Please allow camera access and try again.';
+                alert('Camera access is required to capture your photo. Please allow camera access in your browser settings.');
+            }
+        }
+        
+        function closeCamera() {
+            const modal = document.getElementById('cameraModal');
+            const video = document.getElementById('cameraVideo');
+            
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            
+            video.srcObject = null;
+            modal.classList.remove('show');
+        }
+        
+        document.getElementById('captureButton').addEventListener('click', async () => {
+            const video = document.getElementById('cameraVideo');
+            const canvas = document.getElementById('captureCanvas');
+            const status = document.getElementById('cameraStatus');
+            
+            // Set canvas dimensions to match video
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            // Draw video frame to canvas
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            
+            // Convert canvas to blob
+            canvas.toBlob(async (blob) => {
+                status.textContent = 'Saving photo...';
+                
+                // Create form data
+                const formData = new FormData();
+                formData.append('photo', blob, 'attendance_photo.jpg');
+                formData.append('attendance_id', pendingAttendanceId);
+                
+                try {
+                    const response = await fetch('save_photo.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        status.textContent = 'Photo saved successfully!';
+                        setTimeout(() => {
+                            closeCamera();
+                            fetchAttendance(); // Refresh to show the new photo
+                        }, 1000);
+                    } else {
+                        status.textContent = 'Error: ' + result.message;
+                        alert('Failed to save photo. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    status.textContent = 'Failed to upload photo';
+                    alert('Failed to upload photo. Please try again.');
+                }
+            }, 'image/jpeg', 0.9);
+        });
+        
+        document.getElementById('cancelButton').addEventListener('click', () => {
+            if (confirm('Are you sure you want to skip photo capture? Your attendance will still be marked.')) {
+                closeCamera();
+            }
+        });
         
         function showCurrentScan(user) {
             const currentScan = document.getElementById('currentScan');
             const userDetails = document.getElementById('userDetails');
             
-            const photoUrl = user.photo ? 'uploads/' + user.photo : getPlaceholderImage();
+            const photoUrl = user.session_photo ? 'session_photos/' + user.session_photo : getPlaceholderImage();
             
             userDetails.innerHTML = `
                 <img src="${photoUrl}" class="user-photo-large" alt="Photo" onerror="this.src='${getPlaceholderImage()}'">
@@ -627,7 +832,6 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
                 return;
             }
             
-            // Remove no-data message if it exists
             const noData = container.querySelector('.no-data');
             if (noData) {
                 noData.remove();
@@ -635,15 +839,22 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
             
             countBadge.textContent = records.length + ' Present';
             
-            // Only add new cards that don't exist
             records.forEach(record => {
                 if (existingRecordIds.has(record.id)) {
-                    return; // Skip if already exists
+                    // Update existing card if photo was added
+                    const existingCard = document.getElementById('card-' + record.id);
+                    if (existingCard && record.session_photo) {
+                        const img = existingCard.querySelector('.id-card-photo');
+                        if (img) {
+                            img.src = 'session_photos/' + record.session_photo;
+                        }
+                    }
+                    return;
                 }
                 
                 existingRecordIds.add(record.id);
                 
-                const photoUrl = record.photo ? 'uploads/' + record.photo : getPlaceholderImage();
+                const photoUrl = record.session_photo ? 'session_photos/' + record.session_photo : getPlaceholderImage();
                 const time = new Date(record.timestamp).toLocaleTimeString('en-IN', { 
                     hour: '2-digit', 
                     minute: '2-digit'

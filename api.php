@@ -61,8 +61,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'scan') {
         exit;
     }
     
-    // Mark attendance
-    $insertQuery = "INSERT INTO attendance (session_id, user_id, rfid_code) VALUES (?, ?, ?)";
+    // Mark attendance (without photo initially)
+    $insertQuery = "INSERT INTO attendance (session_id, user_id, rfid_code, photo_captured) VALUES (?, ?, ?, 0)";
     $insertStmt = $conn->prepare($insertQuery);
     $insertStmt->bind_param("iis", $sessionId, $user['id'], $rfidCode);
     
@@ -92,7 +92,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'get_latest') {
     $session = $sessionResult->fetch_assoc();
     $sessionId = $session['id'];
     
-    $query = "SELECT a.*, u.name, u.usn, u.gender, u.email, u.photo 
+    $query = "SELECT a.*, u.name, u.usn, u.gender, u.email 
               FROM attendance a 
               JOIN users u ON a.user_id = u.id 
               WHERE a.session_id = ? 
