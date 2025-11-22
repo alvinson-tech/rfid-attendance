@@ -476,6 +476,7 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
             cursor: pointer;
             transition: all 0.3s ease;
             font-family: 'DM Sans', sans-serif;
+            width: 100%;
         }
         
         .btn-capture:hover {
@@ -495,6 +496,7 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
             cursor: pointer;
             transition: all 0.3s ease;
             font-family: 'DM Sans', sans-serif;
+            width: 100%;
         }
         
         .btn-cancel:hover {
@@ -508,6 +510,35 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
             margin-bottom: 20px;
             color: #6c757d;
             font-size: 14px;
+        }
+        
+        .countdown {
+            text-align: center;
+            font-size: 72px;
+            font-weight: 700;
+            color: #3498db;
+            margin: 20px 0;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pulse-countdown 1s ease-in-out infinite;
+        }
+        
+        @keyframes pulse-countdown {
+            0%, 100% { 
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% { 
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
+        }
+        
+        .countdown.capturing {
+            color: #27ae60;
+            animation: none;
         }
         
         @media (max-width: 768px) {
@@ -613,15 +644,15 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
         </div>
     </div>
     
-    <!-- Camera Modal -->
+            <!-- Camera Modal -->
     <div class="camera-modal" id="cameraModal">
         <div class="camera-container">
-            <h2>📸 Capture Your Photo</h2>
+            <h2>📸 Auto-Capturing Your Photo</h2>
             <div class="camera-status" id="cameraStatus">Initializing camera...</div>
+            <div class="countdown" id="countdown"></div>
             <video id="cameraVideo" autoplay playsinline></video>
             <canvas id="captureCanvas"></canvas>
             <div class="camera-buttons">
-                <button class="btn-capture" id="captureButton">Capture Photo</button>
                 <button class="btn-cancel" id="cancelButton">Cancel</button>
             </div>
         </div>
@@ -697,45 +728,73 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
         }
         
         // Camera functions
+        let captureTimeout = null;
+        let countdownInterval = null;
+        
         async function openCamera() {
             const modal = document.getElementById('cameraModal');
             const video = document.getElementById('cameraVideo');
             const status = document.getElementById('cameraStatus');
+            const countdown = document.getElementById('countdown');
             
             modal.classList.add('show');
             status.textContent = 'Requesting camera access...';
+            countdown.textContent = '';
             
             try {
                 cameraStream = await navigator.mediaDevices.getUserMedia({
-                    video: { width: 640, height: 480 }
+                    video: { width: 640, height: 480, facingMode: 'user' }
                 });
                 
                 video.srcObject = cameraStream;
-                status.textContent = 'Camera ready! Position yourself and click Capture Photo';
+                
+                // Wait for video to be ready
+                video.onloadedmetadata = () => {
+                    status.textContent = 'Get ready! Photo will be captured automatically...';
+                    startCountdown();
+                };
+                
             } catch (error) {
                 console.error('Camera error:', error);
                 status.textContent = 'Camera access denied. Please allow camera access and try again.';
+                countdown.textContent = '❌';
                 alert('Camera access is required to capture your photo. Please allow camera access in your browser settings.');
             }
         }
         
-        function closeCamera() {
-            const modal = document.getElementById('cameraModal');
-            const video = document.getElementById('cameraVideo');
+        function startCountdown() {
+            const countdown = document.getElementById('countdown');
+            const status = document.getElementById('cameraStatus');
+            let timeLeft = 3;
             
-            if (cameraStream) {
-                cameraStream.getTracks().forEach(track => track.stop());
-                cameraStream = null;
-            }
+            countdown.textContent = timeLeft;
             
-            video.srcObject = null;
-            modal.classList.remove('show');
+            countdownInterval = setInterval(() => {
+                timeLeft--;
+                
+                if (timeLeft > 0) {
+                    countdown.textContent = timeLeft;
+                    playBeep(1, 800, 100); // Beep on each count
+                } else {
+                    clearInterval(countdownInterval);
+                    countdown.textContent = '📸';
+                    countdown.classList.add('capturing');
+                    status.textContent = 'Capturing...';
+                    playBeep(1, 1200, 300); // Longer beep for capture
+                    
+                    // Capture after a brief moment
+                    setTimeout(() => {
+                        capturePhoto();
+                    }, 200);
+                }
+            }, 1000);
         }
         
-        document.getElementById('captureButton').addEventListener('click', async () => {
+        async function capturePhoto() {
             const video = document.getElementById('cameraVideo');
             const canvas = document.getElementById('captureCanvas');
             const status = document.getElementById('cameraStatus');
+            const countdown = document.getElementById('countdown');
             
             // Set canvas dimensions to match video
             canvas.width = video.videoWidth;
@@ -745,10 +804,11 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0);
             
+            status.textContent = 'Saving photo...';
+            countdown.textContent = '⏳';
+            
             // Convert canvas to blob
             canvas.toBlob(async (blob) => {
-                status.textContent = 'Saving photo...';
-                
                 // Create form data
                 const formData = new FormData();
                 formData.append('photo', blob, 'attendance_photo.jpg');
@@ -764,21 +824,61 @@ $session = $hasActiveSession ? $activeSession->fetch_assoc() : null;
                     
                     if (result.status === 'success') {
                         status.textContent = 'Photo saved successfully!';
+                        countdown.textContent = '✅';
+                        playBeep(2, 1000, 200); // Success beeps
+                        
                         setTimeout(() => {
                             closeCamera();
                             fetchAttendance(); // Refresh to show the new photo
-                        }, 1000);
+                        }, 1500);
                     } else {
                         status.textContent = 'Error: ' + result.message;
+                        countdown.textContent = '❌';
+                        playBeep(3, 400, 150); // Error beeps
                         alert('Failed to save photo. Please try again.');
+                        setTimeout(() => {
+                            closeCamera();
+                        }, 2000);
                     }
                 } catch (error) {
                     console.error('Upload error:', error);
                     status.textContent = 'Failed to upload photo';
+                    countdown.textContent = '❌';
+                    playBeep(3, 400, 150);
                     alert('Failed to upload photo. Please try again.');
+                    setTimeout(() => {
+                        closeCamera();
+                    }, 2000);
                 }
             }, 'image/jpeg', 0.9);
-        });
+        }
+        
+        function closeCamera() {
+            const modal = document.getElementById('cameraModal');
+            const video = document.getElementById('cameraVideo');
+            const countdown = document.getElementById('countdown');
+            
+            // Clear any pending timeouts/intervals
+            if (captureTimeout) {
+                clearTimeout(captureTimeout);
+                captureTimeout = null;
+            }
+            
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+            
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            
+            video.srcObject = null;
+            countdown.textContent = '';
+            countdown.classList.remove('capturing');
+            modal.classList.remove('show');
+        }
         
         document.getElementById('cancelButton').addEventListener('click', () => {
             if (confirm('Are you sure you want to skip photo capture? Your attendance will still be marked.')) {
